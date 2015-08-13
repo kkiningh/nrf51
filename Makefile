@@ -14,17 +14,40 @@
 #
 # You may optionally define these variables
 #   SDK_VERSION - The version of the SDK you require. If you leave this blank,
-#                 no SDK files will be added to your project
+#                 no SDK files will be added to your project. Note this must
+#                 be a valid SDK version >= 7.0.0 in the form "X.X.0"
+#   SD_VERSION  - The version of the softdevice you require. If you leave this
+#                 blank, no softdevice files will be added to your project.
+#                 Note that this must be a valid softdevice in the form sXX0
+#   NRF_VARIENT - The nrf51 package varient you are building for. This defaults
+#                 to xxaa (256kB flash, 16kB RAM). See the "nRF51 Series
+#                 Compatibility Matrix" from Nordic for more information
 #
 ####
 
 # SDK
 ifdef SDK_VERSION
-SDK_PATH          := ./nRF51_SDK/$(SDK_VERSION)
-SDK_INCLUDE_PATH  := $(SDK_PATH)/Include
-SDK_SOURCE_PATH   := $(SDK_PATH)/Source
-SDK_TEMPLATE_PATH := $(SDK_PATH)/Source/templates/gcc
+SDK_PATH          ?= ./nRF51_SDK/$(SDK_VERSION)
+SDK_INCLUDE_PATH  := $(SDK_PATH)/components
+SDK_SOURCE_PATH   := $(SDK_PATH)/components
+SDK_GCC_PATH      := $(SDK_PATH)/components/toolchain/gcc
+
+# If we're using the softdevice included in the SDK
+ifdef SD_VERSION
+SD_PATH           ?= $(SDK_PATH)/components/softdevice/$(SD_VERSION)
+SD_GCC_PATH       := $(SD_PATH)/toolchain/armgcc
 endif
+else
+
+# If we're using the softdevice but not the SDK
+ifdef SD_VERSION
+# TODO
+$(error "TODO")
+endif
+endif
+
+# Varient
+NRF_VARIENT ?= xxaa
 
 # Executables
 PREFIX  ?= /usr/bin/arm-none-eabi
@@ -47,7 +70,9 @@ DEPFILES := $(patsubst %.c,%.d,$(SRCFILES))
 # Set the CPU type
 CPU ?= cortex-m0
 
-ARCH_FLAGS += -mcpu=$(CPU) -mthumb -mabi=aapcs -msoft-float
+ARCH_FLAGS += -mcpu=$(CPU) -mthumb  # Generate code for the correct processor
+ARCH_FLAGS += -mabi=aapcs           # Use the most modern ARM abi
+ARCH_FLAGS += -msoft-float          # Use libgcc to emulate floating point
 
 # Set compiler options
 CFLAGS  += -Wall -Wextra -Werror  # Standard warnings
@@ -72,15 +97,19 @@ CFLAGS  += -fdata-sections        # Same as above, but for global variables
 # CFLAGS +=
 
 # Set linker options
-LDSCRIPT ?= default.ld
+ifdef SD_VERSION
+LDFLAGS  += -L$(SD_GCC_PATH)
+LDSCRIPT ?= armgcc_$(SD_VERSION)_nrf51822_$(NRF_VARIENT).ld
+endif
+
+ifdef SDK_VERSION
+LDFLAGS  += -L$(SDK_GCC_PATH)
+LDSCRIPT ?= nrf51_$(NRF_VARIENT).ld
+endif
 
 LDFLAGS += -T$(LDSCRIPT)          # Set the linker script
 LDFLAGS += -Wl,--gc-sections      # Allow the linker to remove unused sections
-LDFLAGS += -Wl,-Map=$(*).map      # Create a map file
-
-ifdef SDK_VERSION
-LDFLAGS += -L $(SDK_TEMPLATE_PATH)
-endif
+LDFLAGS += -Wl,-Map=$*.map        # Create a map file
 
 # Set assembler options
 
@@ -103,8 +132,8 @@ debug: $(TARGET)
 release: CFLAGS += -Os -DNDEBUG
 release: $(TARGET)
 
-# If we need the SDK, download it using a script
 ifdef SDK_VERSION
+# If we need the SDK, download it using a script
 $(SDK_PATH):
 	$(Q)nrf51-sdk.sh $(SDK_VERSION)
 endif
@@ -127,6 +156,7 @@ endif
 %.elf %.map:
 	$(Q)$(LD) $(LDFLAGS) $(ARCH_FLAGS) $(OBJS) $(LDLIBS) -o $*.elf
 
+# TODO we need to make sure we're downloading the SDK if we depend on it
 $(TARGET): $(OBJFILES)
 
 clean:
