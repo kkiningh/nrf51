@@ -45,6 +45,9 @@ OBJFILES += $(patsubst %.c,%.o,$(filter %.c,$(SRCFILES)))
 OBJFILES += $(patsubst %.cpp,%.o,$(filter %.cpp,$(SRCFILES)))
 OBJFILES += $(patsubst %.cxx,%.o,$(filter %.cxx,$(SRCFILES)))
 
+# Set the include flags
+INC_FLAGS := $(patsubst %,-isystem%,$(INCPATHS))
+
 # Set architecture specific flags
 CPU ?= cortex-m0
 
@@ -62,7 +65,7 @@ CFLAGS  += -Wconversion           # Implicit converstion should not change value
 CFLAGS  += -Wwrite-strings        # String literals are const
 CFLAGS  += -Wnested-externs       # No using extern for local variables
 CFLAGS  += -Wredundant-decls      # No unneccessary redeclaration
-CFLAGS  += -Winline							  # Unable to inline function marked inline
+CFLAGS  += -Winline               # Unable to inline function marked inline
 CFLAGS  += -Wmissing-declarations # Global functions must be declared before use
 CFLAGS  += -Wmissing-prototypes   # Same as above, but for prototypes
 CFLAGS  += -Wstrict-prototypes    # Functions must declare their parameter types
@@ -84,7 +87,6 @@ LDFLAGS += -L./ld/
 LDFLAGS += -Wl,--gc-sections      # Allow the linker to remove unused sections
 LDFLAGS += -Wl,-Map=$*.map        # Create a map file
 LDFLAGS += --specs=nano.specs -lc -lnosys # Use newlib nano as C stdlib
-LDFLAGS += -Wl,-v
 
 # Set assembler options
 ASMFLAGS += -x assembler-with-cpp # Use the preprocessor when assembling files
@@ -93,7 +95,7 @@ ASMFLAGS += -x assembler-with-cpp # Use the preprocessor when assembling files
 CPPFLAGS += -Wall -Wundef         # Turn on all preprocessor warnings
 
 # Quiet by default, use V=1 to show all steps
-ifneq ($(VERBOSE),1)
+ifneq ($(V),1)
 Q := @
 endif
 
@@ -125,7 +127,7 @@ clean:
 
 %.o: %.c
 	@echo "  CC      $@"
-	$(Q)$(CC) $(CFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
+	$(Q)$(CC) $(CFLAGS) $(INC_FLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
 %.o: $.cpp
 	@echo "  CXX     $@"
@@ -153,7 +155,7 @@ clean:
 
 %.elf: $(OBJFILES)
 	@echo "  LD      $@"
-	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(ARCH_FLAGS) -o $@ $(OBJFIlES) $(LDLIBS)
+	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(ARCH_FLAGS) -o $@ $(OBJFILES) $(LDLIBS)
 
 # Include dependency files for incremental builds
-#-include $(patsubst %.o,%.d,$(OBJFILES))
+-include $(patsubst %.o,%.d,$(OBJFILES))
