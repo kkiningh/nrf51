@@ -45,8 +45,8 @@ OBJFILES += $(patsubst %.c,%.o,$(filter %.c,$(SRCFILES)))
 OBJFILES += $(patsubst %.cpp,%.o,$(filter %.cpp,$(SRCFILES)))
 OBJFILES += $(patsubst %.cxx,%.o,$(filter %.cxx,$(SRCFILES)))
 
-# Set the include flags
-INC_FLAGS := $(patsubst %,-isystem%,$(INCPATHS))
+# Get the dependency files
+DEPFILES := $(patsubst %.o,%.d,$(OBJFILES))
 
 # Set architecture specific flags
 CPU ?= cortex-m0
@@ -75,6 +75,9 @@ CFLAGS  += -ffunction-sections    # Generate seperate section for each function
 CFLAGS  += -fdata-sections        # Same as above, but for global variables
 CFLAGS  += -fno-strict-aliasing   # Do not assume strict aliasing
 
+CFLAGS  += $(patsubst %,-I%,$(INCPATHS))        # Add project includes
+CFLAGS  += $(patsubst %,-isystem%,$(SYS_INCS))  # Add system includes
+
 # Disable annoying warnings
 # CFLAGS +=
 
@@ -82,8 +85,8 @@ CFLAGS  += -fno-strict-aliasing   # Do not assume strict aliasing
 NRF_VARIENT ?= xxaa
 
 LDSCRIPT ?= ./ld/nrf51_$(NRF_VARIENT).ld
-LDFLAGS += -L./ld/
 
+LDFLAGS += -L./ld/
 LDFLAGS += -Wl,--gc-sections      # Allow the linker to remove unused sections
 LDFLAGS += -Wl,-Map=$*.map        # Create a map file
 LDFLAGS += --specs=nano.specs -lc -lnosys # Use newlib nano as C stdlib
@@ -93,11 +96,7 @@ ASMFLAGS += -x assembler-with-cpp # Use the preprocessor when assembling files
 
 # Set preprocessor flags
 CPPFLAGS += -Wall -Wundef         # Turn on all preprocessor warnings
-
-# Quiet by default, use V=1 to show all steps
-ifneq ($(V),1)
-Q := @
-endif
+CPPFLAGS += -MD                   # Generate dependency information
 
 # Remove the default suffix rules
 .SUFFIXES:
@@ -105,57 +104,73 @@ endif
 # Set the phony targets (i.e. the targets that should not produce a file)
 .PHONY: debug release clean
 
+#OUTDIR = build/$(shell echo "$(strip $(CFLAGS) $(LDFLAGS) $(CPPFLAGS) $(ARCH_FLAGS))" | sha1sum)
+OUTDIR ?= build
+
+__dummy := $(shell mkdir -p $(OUTDIR))
+
 debug: CFLAGS += -g -O0
 debug: CPPFLAGS += -DDEBUG
-debug: $(TARGET)
+debug: $(OUTDIR)/$(TARGET)
 
 release: CFLAGS += -Os
 release: CPPFLAGS += -DNDEBUG
-release: $(TARGET)
+release: $(OUTDIR)/$(TARGET)
 
 clean:
 	-$(RM) $(OBJFILES) $(DEPFILES) $(TARGET)
 
+# Quiet by default, use V=1 to show executed commands
+ifneq ($(V),1)
+Q := @
+endif
+
 # Common targets
-%.o: %.s
+$(OUTDIR)/%.o: %.s
 	@echo "  AS      $@"
+	@mkdir -p $(dir $@)
 	$(Q)$(AS) $(ASFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
-%.o: %.S
+$(OUTDIR)/%.o: %.S
 	@echo "  AS      $@"
+	@mkdir -p $(dir $@)
 	$(Q)$(AS) $(ASFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
-%.o: %.c
+$(OUTDIR)/%.o: %.c
 	@echo "  CC      $@"
+	@mkdir -p $(dir $@)
 	$(Q)$(CC) $(CFLAGS) $(INC_FLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
-%.o: $.cpp
+$(OUTDIR)/%.o: $%.cpp
 	@echo "  CXX     $@"
+	@mkdir -p $(dir $@)
 	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
-%.o: $.cxx
+$(OUTDIR)/%.o: %.cxx
 	@echo "  CXX     $@"
+	mkdir -p $(dir $@)
 	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
-%.bin: %.elf
+$(OUTDIR)/%.bin: $(OUTDIR)/%.elf
 	@echo "  OBJDUMP $@"
 	$(Q)$(OBJCOPY) -Obinary $< $@
 
-%.hex: %.elf
+$(OUTDIR)/%.hex: $(OUTDIR)/%.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -Oihex $< $@
 
-%.srec: %.elf
+$(OUTDIR)/%.srec: $(OUTDIR)/%.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -Osrec $< $@
 
-%.list: %.elf
+$(OUTDIR)/%.list: $(OUTDIR)/%.elf
 	@echo "  OBJDUMP $@"
 	$(Q)$(OBJDUMP) -S $< > $@
 
-%.elf: $(OBJFILES)
+$(OUTDIR)/%.elf: $(addprefix $(OUTDIR)/,$(OBJFILES)) $(LDSCRIPT)
 	@echo "  LD      $@"
-	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(ARCH_FLAGS) -o $@ $(OBJFILES) $(LDLIBS)
+	@echo $^
+	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(ARCH_FLAGS) -o $@ $(addprefix $(OUTDIR)/,$(OBJFILES))
 
 # Include dependency files for incremental builds
--include $(patsubst %.o,%.d,$(OBJFILES))
+-include $(DEPFILES)

@@ -1,22 +1,23 @@
-# SDK & Softdevice
-#SDK_VERSION := 9.0.0
-#SD_VERSION  := s110
+# First target is default
+.PHONY: all
+all: debug
 
-# Source files
-SRCFILES += ./lib/nRF51_SDK_v9.0.0/components/toolchain/gcc/gcc_startup_nrf51.s
-SRCFILES += ./lib/nRF51_SDK_v9.0.0/components/toolchain/system_nrf51.c
-SRCFILES += src/test.c
+# Project
+TARGET   := test.bin          # Output file
+SRCFILES += src/test.c        # Source files
+INCPATHS += src               # Include Directories
 
-INCPATHS += ./lib/nRF51_SDK_v9.0.0/components/device
-INCPATHS += ./lib/nRF51_SDK_v9.0.0/components/toolchain
-INCPATHS += ./lib/nRF51_SDK_v9.0.0/components/toolchain/gcc
-INCPATHS += ./lib/nRF51_SDK_v9.0.0/components/libraries/util
+# SDK
+SDK_VERSION := 9.0.0
+SRCFILES +=                   # SDK source files
+SYS_INCS +=                   # SDK header directories
 
-# Output
-TARGET := test.bin
+# Softdevice
+SD_VERSION  := s110
 
 # Project specific flags
-ASMFLAGS += -D__HEAP_SIZE=0
-CPPFLAGS += -DNRF51
+ASMFLAGS += -D__HEAP_SIZE=0   # Don't use any heap
 
--include mk/Makefile.mk
+include mk/sdk.mk
+include mk/softdevice.mk
+include mk/Makefile.mk

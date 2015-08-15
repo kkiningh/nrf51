@@ -1,36 +1,32 @@
 # SDK
 ifdef SDK_VERSION
-SDK_PATH          ?= ./lib/nRF51_SDK_v$(SDK_VERSION)
-SDK_INCLUDE_PATH  := $(SDK_PATH)/components
-SDK_SOURCE_PATH   := $(SDK_PATH)/components
-SDK_GCC_PATH      := $(SDK_PATH)/components/toolchain/gcc
+
+# Make sure we don't have any trailing whitespace at the end of SDK_VERSION
+# See http://stackoverflow.com/questions/9116283/trailing-whitespace-in-makefile-variable
+# for why this is a problem
+ifneq ($(word 2,[$(SDK_VERSION)]),)
+  $(error There is a whitespace inside the value of 'SDK_VERSION')
 endif
 
-# Softdevice
-ifdef SD_VERSION
-# Use a friendly default for the SD_PATH if we know we're using the SDK
-ifdef SDK_VERSION
-SD_PATH           ?= $(SDK_PATH)/components/softdevice/$(SD_VERSION)
-endif
-SD_GCC_PATH       := $(SD_PATH)/toolchain/armgcc
-endif
+# SDK path defaults to the lib directory
+SDK_PATH ?= ./lib/nRF51_SDK_v$(SDK_VERSION)
 
-# Varient
+# Add the startup files
+SRCFILES += $(SDK_PATH)/components/toolchain/gcc/gcc_startup_nrf51.s
+SRCFILES += $(SDK_PATH)/components/toolchain/system_nrf51.c
 
-# If we're using the softdevice, add the startup file
-ifdef SDK_VERSION
-SRCFILES += $(SDK_GCC_PATH)/gcc_startup_nrf51.s
-SRCFILES += $(SDK_GCC_PATH)/../system_nrf51.c
+# Add common header file directories
+SYS_INCS += $(SDK_PATH)/components/device
+SYS_INCS += $(SDK_PATH)/components/libraries/util
+SYS_INCS += $(SDK_PATH)/components/toolchain
+SYS_INCS += $(SDK_PATH)/components/toolchain/gcc
+
+# Add required defines for the SDK
+CPPFLAGS += -DNRF51       # Required for nrf.h
+
+# Download the SDK if we don't already have it
+#$(SDK_PATH)/%:
+#	@echo "Installing SDK v$(SDK_VERSION)"
+#	$(Q)scripts/nrf51-sdk.sh $(SDK_VERSION) lib
+
 endif
-
-ifdef SD_VERSION
-LDFLAGS  += -L$(SD_GCC_PATH)
-LDSCRIPT ?= $(SD_GCC_PATH)/armgcc_$(SD_VERSION)_nrf51822_$(NRF_VARIENT).ld
-endif
-
-# If we need the SDK, download it
-ifdef SDK_VERSION
-$(SDK_PATH):
-	$(Q)scripts/nrf51-sdk.sh $(SDK_VERSION) lib
-endif
-
