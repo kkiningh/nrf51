@@ -38,22 +38,30 @@ OBJCOPY := "$(PREFIX)-objcopy"
 OBJDUMP := "$(PREFIX)-objdump"
 SIZE    := "$(PREFIX)-size"
 
+# Set the build folder
+OUTDIR ?= build
+
 # Get the object files we need to compile
-OBJFILES := $(patsubst %.s,%.o,$(filter %.s,$(SRCFILES)))
-OBJFILES += $(patsubst %.S,%.o,$(filter %.S,$(SRCFILES)))
-OBJFILES += $(patsubst %.c,%.o,$(filter %.c,$(SRCFILES)))
-OBJFILES += $(patsubst %.cpp,%.o,$(filter %.cpp,$(SRCFILES)))
-OBJFILES += $(patsubst %.cxx,%.o,$(filter %.cxx,$(SRCFILES)))
+define OBJ
+$(addprefix $(OUTDIR)/,$(patsubst %$1,%.o,$(filter %$1,$2)))
+endef
+
+OBJFILES  = $(call OBJ,.s,$(SRCFILES))
+OBJFILES += $(call OBJ,.S,$(SRCFILES))
+OBJFILES += $(call OBJ,.c,$(SRCFILES))
+OBJFILES += $(call OBJ,.cpp,$(SRCFILES))
+OBJFILES += $(call OBJ,.cxx,$(SRCFILES))
 
 # Get the dependency files
-DEPFILES := $(patsubst %.o,%.d,$(OBJFILES))
+DEPFILES += $(patsubst %.o,%.d,$(OBJFILES))
 
 # Set architecture specific flags
-CPU ?= cortex-m0
+ARCH_FLAGS  = -mcpu=cortex-m0     # Generate code for the cortex-m0
+ARCH_FLAGS += -mthumb             # Generate only thumb instructions
+ARCH_FLAGS += -mabi=aapcs         # Use the most modern ARM abi
+ARCH_FLAGS += -msoft-float        # Use libgcc to emulate floating point
 
-ARCH_FLAGS += -mcpu=$(CPU) -mthumb  # Generate code for the correct processor
-ARCH_FLAGS += -mabi=aapcs           # Use the most modern ARM abi
-ARCH_FLAGS += -msoft-float          # Use libgcc to emulate floating point
+TARGET_ARCH ?= $(strip $(ARCH_FLAGS))
 
 # Set compiler options
 CFLAGS  += -Wall -Wextra -Werror  # Standard warnings
@@ -78,9 +86,6 @@ CFLAGS  += -fno-strict-aliasing   # Do not assume strict aliasing
 CFLAGS  += $(patsubst %,-I%,$(INCPATHS))        # Add project includes
 CFLAGS  += $(patsubst %,-isystem%,$(SYS_INCS))  # Add system includes
 
-# Disable annoying warnings
-# CFLAGS +=
-
 # Set linker options
 NRF_VARIENT ?= xxaa
 
@@ -96,18 +101,13 @@ ASMFLAGS += -x assembler-with-cpp # Use the preprocessor when assembling files
 
 # Set preprocessor flags
 CPPFLAGS += -Wall -Wundef         # Turn on all preprocessor warnings
-CPPFLAGS += -MD                   # Generate dependency information
+CPPFLAGS += -MMD                  # Generate dependency information
 
 # Remove the default suffix rules
 .SUFFIXES:
 
 # Set the phony targets (i.e. the targets that should not produce a file)
 .PHONY: debug release clean
-
-#OUTDIR = build/$(shell echo "$(strip $(CFLAGS) $(LDFLAGS) $(CPPFLAGS) $(ARCH_FLAGS))" | sha1sum)
-OUTDIR ?= build
-
-__dummy := $(shell mkdir -p $(OUTDIR))
 
 debug: CFLAGS += -g -O0
 debug: CPPFLAGS += -DDEBUG
@@ -118,7 +118,7 @@ release: CPPFLAGS += -DNDEBUG
 release: $(OUTDIR)/$(TARGET)
 
 clean:
-	-$(RM) $(OBJFILES) $(DEPFILES) $(TARGET)
+	-$(RM) $(OBJFILES) $(DEPFILES) $(OUTDIR)/$(TARGET)
 
 # Quiet by default, use V=1 to show executed commands
 ifneq ($(V),1)
@@ -129,48 +129,47 @@ endif
 $(OUTDIR)/%.o: %.s
 	@echo "  AS      $@"
 	@mkdir -p $(dir $@)
-	$(Q)$(AS) $(ASFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
+	$(Q)$(AS) $(ASFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -o $@ -c $<
 
 $(OUTDIR)/%.o: %.S
 	@echo "  AS      $@"
-	@mkdir -p $(dir $@)
-	$(Q)$(AS) $(ASFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
+	@#mkdir -p $(dir $@)
+	$(Q)$(AS) $(ASFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -o $@ -c $<
 
 $(OUTDIR)/%.o: %.c
 	@echo "  CC      $@"
 	@mkdir -p $(dir $@)
-	$(Q)$(CC) $(CFLAGS) $(INC_FLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
+	$(Q)$(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -o $@ -c $<
 
-$(OUTDIR)/%.o: $%.cpp
+$(OUTDIR)/%.o: %.cpp
 	@echo "  CXX     $@"
 	@mkdir -p $(dir $@)
-	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
+	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -o $@ -c $<
 
 $(OUTDIR)/%.o: %.cxx
 	@echo "  CXX     $@"
-	mkdir -p $(dir $@)
-	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
+	@mkdir -p $(dir $@)
+	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -o $@ -c $<
 
-$(OUTDIR)/%.bin: $(OUTDIR)/%.elf
+%.bin: %.elf
 	@echo "  OBJDUMP $@"
 	$(Q)$(OBJCOPY) -Obinary $< $@
 
-$(OUTDIR)/%.hex: $(OUTDIR)/%.elf
+%.hex: %.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -Oihex $< $@
 
-$(OUTDIR)/%.srec: $(OUTDIR)/%.elf
+%.srec: %.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -Osrec $< $@
 
-$(OUTDIR)/%.list: $(OUTDIR)/%.elf
+%.list: %.elf
 	@echo "  OBJDUMP $@"
 	$(Q)$(OBJDUMP) -S $< > $@
 
-$(OUTDIR)/%.elf: $(addprefix $(OUTDIR)/,$(OBJFILES)) $(LDSCRIPT)
+%.elf: $(OBJFILES) $(LDSCRIPT)
 	@echo "  LD      $@"
-	@echo $^
-	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(ARCH_FLAGS) -o $@ $(addprefix $(OUTDIR)/,$(OBJFILES))
+	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(TARGET_ARCH) -o $@ $(OBJFILES)
 
 # Include dependency files for incremental builds
 -include $(DEPFILES)

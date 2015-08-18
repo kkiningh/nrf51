@@ -9,7 +9,7 @@ ifneq ($(word 2,[$(SDK_VERSION)]),)
 endif
 
 # SDK path defaults to the lib directory
-SDK_PATH ?= ./lib/nRF51_SDK_v$(SDK_VERSION)
+SDK_PATH ?= lib/nRF51_SDK_v$(SDK_VERSION)
 
 # Add the startup files
 SRCFILES += $(SDK_PATH)/components/toolchain/gcc/gcc_startup_nrf51.s
