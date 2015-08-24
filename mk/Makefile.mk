@@ -39,24 +39,25 @@ OBJDUMP := "$(PREFIX)-objdump"
 SIZE    := "$(PREFIX)-size"
 
 # Set the build folder
-OUTDIR ?= build
+OUTDIR        ?= build
+OUTDIR_TARGET := $(addprefix $(OUTDIR)/, $(TARGET))
 
 # Get the object files we need to compile
-define OBJ
+define MKOBJ
 $(addprefix $(OUTDIR)/,$(patsubst %$1,%.o,$(filter %$1,$2)))
 endef
 
-OBJFILES  = $(call OBJ,.s,$(SRCFILES))
-OBJFILES += $(call OBJ,.S,$(SRCFILES))
-OBJFILES += $(call OBJ,.c,$(SRCFILES))
-OBJFILES += $(call OBJ,.cpp,$(SRCFILES))
-OBJFILES += $(call OBJ,.cxx,$(SRCFILES))
+OBJ += $(call MKOBJ,.s,  $(SRC))
+OBJ += $(call MKOBJ,.S,  $(SRC))
+OBJ += $(call MKOBJ,.c,  $(SRC))
+OBJ += $(call MKOBJ,.cpp,$(SRC))
+OBJ += $(call MKOBJ,.cxx,$(SRC))
 
 # Get the dependency files
-DEPFILES += $(patsubst %.o,%.d,$(OBJFILES))
+DEP += $(patsubst %.o,%.d,$(OBJ))
 
 # Set architecture specific flags
-ARCH_FLAGS  = -mcpu=cortex-m0     # Generate code for the cortex-m0
+ARCH_FLAGS += -mcpu=cortex-m0     # Generate code for the cortex-m0
 ARCH_FLAGS += -mthumb             # Generate only thumb instructions
 ARCH_FLAGS += -mabi=aapcs         # Use the most modern ARM abi
 ARCH_FLAGS += -msoft-float        # Use libgcc to emulate floating point
@@ -83,8 +84,8 @@ CFLAGS  += -ffunction-sections    # Generate seperate section for each function
 CFLAGS  += -fdata-sections        # Same as above, but for global variables
 CFLAGS  += -fno-strict-aliasing   # Do not assume strict aliasing
 
-CFLAGS  += $(patsubst %,-I%,$(INCPATHS))        # Add project includes
-CFLAGS  += $(patsubst %,-isystem%,$(SYS_INCS))  # Add system includes
+CFLAGS  += $(patsubst %,-I%,$(INC))           # Project header
+CFLAGS  += $(patsubst %,-isystem%,$(SYS_INC)) # System includes
 
 # Set linker options
 NRF_VARIENT ?= xxaa
@@ -111,14 +112,14 @@ CPPFLAGS += -MMD                  # Generate dependency information
 
 debug: CFLAGS += -g -O0
 debug: CPPFLAGS += -DDEBUG
-debug: $(OUTDIR)/$(TARGET)
+debug: $(OUTDIR_TARGET)
 
 release: CFLAGS += -Os
 release: CPPFLAGS += -DNDEBUG
-release: $(OUTDIR)/$(TARGET)
+release: $(OUTDIR_TARGET)
 
 clean:
-	-$(RM) $(OBJFILES) $(DEPFILES) $(OUTDIR)/$(TARGET)
+	-$(RM) $(OBJ) $(DEP) $(OUTDIR)/$(TARGET)
 
 # Quiet by default, use V=1 to show executed commands
 ifneq ($(V),1)
@@ -126,6 +127,26 @@ Q := @
 endif
 
 # Common targets
+%.bin: %.elf
+	@echo "  OBJDUMP $@"
+	$(Q)$(OBJCOPY) -Obinary $< $@
+
+%.hex: %.elf
+	@echo "  OBJCOPY $@"
+	$(Q)$(OBJCOPY) -Oihex $< $@
+
+%.srec: %.elf
+	@echo "  OBJCOPY $@"
+	$(Q)$(OBJCOPY) -Osrec $< $@
+
+%.list: %.elf
+	@echo "  OBJDUMP $@"
+	$(Q)$(OBJDUMP) -S $< > $@
+
+%.elf: $(OBJ) # $(LDSCRIPT)
+	@echo "  LD      $@"
+	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(TARGET_ARCH) -o $@ $(OBJ)
+
 $(OUTDIR)/%.o: %.s
 	@echo "  AS      $@"
 	@mkdir -p $(dir $@)
@@ -133,7 +154,7 @@ $(OUTDIR)/%.o: %.s
 
 $(OUTDIR)/%.o: %.S
 	@echo "  AS      $@"
-	@#mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	$(Q)$(AS) $(ASFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -o $@ -c $<
 
 $(OUTDIR)/%.o: %.c
@@ -151,25 +172,5 @@ $(OUTDIR)/%.o: %.cxx
 	@mkdir -p $(dir $@)
 	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -o $@ -c $<
 
-%.bin: %.elf
-	@echo "  OBJDUMP $@"
-	$(Q)$(OBJCOPY) -Obinary $< $@
-
-%.hex: %.elf
-	@echo "  OBJCOPY $@"
-	$(Q)$(OBJCOPY) -Oihex $< $@
-
-%.srec: %.elf
-	@echo "  OBJCOPY $@"
-	$(Q)$(OBJCOPY) -Osrec $< $@
-
-%.list: %.elf
-	@echo "  OBJDUMP $@"
-	$(Q)$(OBJDUMP) -S $< > $@
-
-%.elf: $(OBJFILES) $(LDSCRIPT)
-	@echo "  LD      $@"
-	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(TARGET_ARCH) -o $@ $(OBJFILES)
-
 # Include dependency files for incremental builds
--include $(DEPFILES)
+-include $(DEP)

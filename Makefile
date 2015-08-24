@@ -4,13 +4,13 @@ all: debug
 
 # Project
 TARGET   := test.bin          # Output file
-SRCFILES += src/test.c        # Source files
-INCPATHS += src               # Include Directories
+SRC      += src/test.c        # Source files
+INC      += src               # Include Directories
 
 # SDK
 SDK_VERSION := 9.0.0
-SRCFILES +=                   # SDK source files
-SYS_INCS +=                   # SDK header directories
+SDK_SRC     +=                # SDK source files
+SDK_INC     +=                # SDK header directories
 
 # Softdevice
 SD_VERSION  := s110
