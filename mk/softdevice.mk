@@ -5,7 +5,7 @@ ifdef SD_VERSION
 # See http://stackoverflow.com/questions/9116283/trailing-whitespace-in-makefile-variable
 # for why this is a problem
 ifneq ($(word 2,[$(SD_PATH)]),)
-  $(error "There is a whitespace inside the value of 'SD_PATH'")
+  $(error "There is whitespace inside the value of 'SD_PATH'")
 endif
 
 # Use a friendly default for the SD_PATH if we know we're using the SDK

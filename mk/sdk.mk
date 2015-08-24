@@ -3,7 +3,7 @@ ifdef SDK_VERSION
 # Make sure we don't have any trailing whitespace at the end of SDK_VERSION
 # See http://stackoverflow.com/questions/9116283/trailing-whitespace-in-makefile-variable
 ifneq ($(word 2,[$(SDK_VERSION)]),)
-  $(error There is a whitespace inside the value of 'SDK_VERSION')
+  $(error "There is whitespace inside the value of 'SDK_VERSION'")
 endif
 
 # SDK path defaults to the lib directory
