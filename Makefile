@@ -9,6 +9,7 @@ INC      += src               # Include Directories
 
 # SDK
 SDK_VERSION := 9.0.0
+SDK_PATH    := lib/nRF51_SDK_v$(SDK_VERSION)
 SDK_SRC     +=                # SDK source files
 SDK_INC     +=                # SDK header directories
 

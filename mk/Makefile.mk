@@ -134,7 +134,7 @@ clean:
 	@echo "  OBJDUMP $@"
 	$(Q)$(OBJDUMP) -S $< > $@
 
-%.elf %.map: $(OBJ) # $(LDSCRIPT)
+%.elf %.map: $(OBJ) $(LDSCRIPT)
 	@echo "  LD      $@"
 	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) -Wl,-Map=$*.map $(TARGET_ARCH) -o $*.elf $(OBJ)
 
