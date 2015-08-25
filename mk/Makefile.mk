@@ -1,27 +1,14 @@
 ####
-# Makefile.include - Helper file for projects depending on the nRF51 SDK
+# Makefile.mk - Helper file for projects depending on the nRF51 SDK
 #
 # You can include this file by adding
-#   -include Makefile.include
+#   include mk/Makefile.mk
 # to the bottom of your makefile
 #
-# You must define these variables
-#   TARGET   - The name of the binary you want to produce
-#   SRCFILES - Your project's source files
-#   INCFILES - Your project's include files. Note that if you define
-#              SDK_VERSION, all sdk header files are already added to
-#              your project
-#
-# You may optionally define these variables
-#   SDK_VERSION - The version of the SDK you require. If you leave this blank,
-#                 no SDK files will be added to your project. Note this must
-#                 be a valid SDK version >= 7.0.0 in the form "X.X.0"
-#   SD_VERSION  - The version of the softdevice you require. If you leave this
-#                 blank, no softdevice files will be added to your project.
-#                 Note that this must be a valid softdevice in the form sXX0
-#   NRF_VARIENT - The nrf51 package varient you are building for. This defaults
-#                 to xxaa (256kB flash, 16kB RAM). See the "nRF51 Series
-#                 Compatibility Matrix" from Nordic for more information
+# To use this makefile you must define these variables:
+#   TARGET  - The name of the binary you want to produce
+#   SRC     - Your project's source files
+#   INC     - Your project's include directories
 #
 ####
 
@@ -94,7 +81,6 @@ LDSCRIPT ?= ./ld/nrf51_$(NRF_VARIENT).ld
 
 LDFLAGS += -L./ld/
 LDFLAGS += -Wl,--gc-sections      # Allow the linker to remove unused sections
-LDFLAGS += -Wl,-Map=$*.map        # Create a map file
 LDFLAGS += --specs=nano.specs -lc -lnosys # Use newlib nano as C stdlib
 
 # Set assembler options
@@ -102,13 +88,21 @@ ASMFLAGS += -x assembler-with-cpp # Use the preprocessor when assembling files
 
 # Set preprocessor flags
 CPPFLAGS += -Wall -Wundef         # Turn on all preprocessor warnings
-CPPFLAGS += -MMD                  # Generate dependency information
+CPPFLAGS += -MD -MP               # Generate dependency information
 
 # Remove the default suffix rules
 .SUFFIXES:
 
+# Never remove targets, even if they're considered intermediate
+.SECONDARY:
+
 # Set the phony targets (i.e. the targets that should not produce a file)
 .PHONY: debug release clean
+
+# Quiet by default, use V=1 to show executed commands
+ifneq ($(V),1)
+Q := @
+endif
 
 debug: CFLAGS += -g -O0
 debug: CPPFLAGS += -DDEBUG
@@ -119,12 +113,9 @@ release: CPPFLAGS += -DNDEBUG
 release: $(OUTDIR_TARGET)
 
 clean:
-	-$(RM) $(OBJ) $(DEP) $(OUTDIR)/$(TARGET)
-
-# Quiet by default, use V=1 to show executed commands
-ifneq ($(V),1)
-Q := @
-endif
+	-$(RM) $(OBJ) $(DEP) $(OUTDIR_TARGET)
+	-$(RM) $(addsuffix .elf,$(basename $(OUTDIR_TARGET)))
+	-$(RM) $(addsuffix .map,$(basename $(OUTDIR_TARGET)))
 
 # Common targets
 %.bin: %.elf
@@ -143,9 +134,9 @@ endif
 	@echo "  OBJDUMP $@"
 	$(Q)$(OBJDUMP) -S $< > $@
 
-%.elf: $(OBJ) # $(LDSCRIPT)
+%.elf %.map: $(OBJ) # $(LDSCRIPT)
 	@echo "  LD      $@"
-	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) $(TARGET_ARCH) -o $@ $(OBJ)
+	$(Q)$(LD) $(LDFLAGS) -T$(LDSCRIPT) -Wl,-Map=$*.map $(TARGET_ARCH) -o $*.elf $(OBJ)
 
 $(OUTDIR)/%.o: %.s
 	@echo "  AS      $@"

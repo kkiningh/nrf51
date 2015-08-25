@@ -23,13 +23,13 @@ SDK_INC  += $(SDK_PATH)/components/toolchain/gcc
 CPPFLAGS += -DNRF51       # Required for nrf.h
 
 # Download the SDK if we don't already have it
-$(SDK_PATH) $(SDK_SRC): $(SDK_ZIP)
-	@echo "Installing SDK v$(SDK_VERSION)"
-	$(Q)scripts/nrf51-sdk.sh $(SDK_VERSION) $(SDK_PATH)
-#	unzip preserves the timestamps from the zip file
-# 	Use touch to convince make we don't need to unzip after the first time
-	$(Q)find $(SDK_PATH) -print0 | xargs -0 touch -r $(SDK_PATH)
-
+#$(SDK_PATH) $(SDK_SRC): $(SDK_ZIP)
+#	@echo "Installing SDK v$(SDK_VERSION)"
+#	$(Q)scripts/nrf51-sdk.sh $(SDK_VERSION) $(SDK_PATH)
+##	unzip preserves the timestamps from the zip file
+## 	Use touch to convince make we don't need to unzip after the first time
+#	$(Q)find $(SDK_PATH) -print0 | xargs -0 touch -r $(SDK_PATH)
+#
 # Add the SDK files we need to the list of files to compile
 SRC     += $(SDK_SRC)
 SYS_INC += $(SDK_INC)
