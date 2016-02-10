@@ -9,8 +9,13 @@ EOF
 # Go to the source directory, defaulting to the current directory
 if ! cd "${1:-.}" ; then
   echo "$USAGE" >&2
-  exit
+  exit 1
 fi
 
-# Use git describe to print the string
-git describe --long --tags --dirty --always
+# If there's a VERSION file present use that
+if [ -f VERSION ] ; then
+  cat VERSION
+else
+  # Use git describe to print the string
+  git describe --long --tags --dirty --always
+fi
