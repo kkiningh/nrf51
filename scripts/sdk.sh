@@ -9,16 +9,18 @@
 ###
 
 read -d '' SDK_URLS <<EOF
-9.0.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v9.x.x/nRF51_SDK_9.0.0_2e23562.zip
-8.1.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v8.x.x/nRF51_SDK_8.1.0_b6ed55f.zip
-8.0.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v8.x.x/nRF51_SDK_8.0.0_5fc2c3a.zip
-7.2.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v7.x.x/nRF51_SDK_7.2.0_cf547b5.zip
-7.1.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v7.x.x/nRF51_SDK_7.1.0_372d17a.zip
-7.0.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v7.x.x/nRF51_SDK_7.0.0_2ab6a52.zip
-6.1.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v6.x.x/nrf51_sdk_v6_1_0_b2ec2e6.zip
-6.0.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v6.x.x/nrf51_sdk_v6_0_0_43681.zip
-5.2.0 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v5.x.x/nrf51_sdk_v5_2_0_39364.zip
-4.4.2 https://developer.nordicsemi.com/nRF51_SDK/nRF51_SDK_v4.x.x/nrf51_sdk_v4_4_2_33551.zip
+11.0.0 https://developer.nordicsemi.com/nRF5_SDK/nRF5_SDK_v11.x.x/nRF5_SDK_11.0.0-2.alpha_bc3f6a0.zip
+10.0.0 https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v10.x.x/nRF51_SDK_10.0.0_dc26b5e.zip
+9.0.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v9.x.x/nRF51_SDK_9.0.0_2e23562.zip
+8.1.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v8.x.x/nRF51_SDK_8.1.0_b6ed55f.zip
+8.0.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v8.x.x/nRF51_SDK_8.0.0_5fc2c3a.zip
+7.2.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v7.x.x/nRF51_SDK_7.2.0_cf547b5.zip
+7.1.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v7.x.x/nRF51_SDK_7.1.0_372d17a.zip
+7.0.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v7.x.x/nRF51_SDK_7.0.0_2ab6a52.zip
+6.1.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v6.x.x/nrf51_sdk_v6_1_0_b2ec2e6.zip
+6.0.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v6.x.x/nrf51_sdk_v6_0_0_43681.zip
+5.2.0  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v5.x.x/nrf51_sdk_v5_2_0_39364.zip
+4.4.2  https://developer.nordicsemi.com/nRF5_SDK/nRF51_SDK_v4.x.x/nrf51_sdk_v4_4_2_33551.zip
 EOF
 
 read -d '' USAGE <<EOF
